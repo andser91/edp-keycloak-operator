@@ -248,6 +248,17 @@ func (h *Helper) SetRealmOwnerRef(ctx context.Context, object ObjectWithRealmRef
 	}
 }
 
+func (h *Helper) TryRemoveFinalizer(ctx context.Context, obj client.Object, finalizer string) error {
+	if !obj.GetDeletionTimestamp().IsZero() {
+		if controllerutil.RemoveFinalizer(obj, finalizer) {
+			if err := h.client.Update(ctx, obj); err != nil {
+				return errors.Wrap(err, "unable to update instance")
+			}
+		}
+	}
+	return nil
+}
+
 func (h *Helper) TryToDelete(ctx context.Context, obj client.Object, terminator Terminator, finalizer string) (isDeleted bool, resultErr error) {
 	logger := ctrl.LoggerFrom(ctx)
 

@@ -25,6 +25,7 @@ const (
 )
 
 var ErrKeycloakIsNotAvailable = errors.New("keycloak is not available")
+var ErrKeycloakRealmNotFound = errors.New("keycloak realm is not available")
 
 // KeycloakAuthData contains data for keycloak authentication.
 type KeycloakAuthData struct {
@@ -55,7 +56,6 @@ func (h *Helper) CreateKeycloakClientFromRealmRef(ctx context.Context, object Ob
 	if err != nil {
 		return nil, err
 	}
-
 	return h.CreateKeycloakClientFomAuthData(ctx, authData)
 }
 
@@ -220,16 +220,20 @@ func (h *Helper) getKeycloakAuthDataFromRealmRef(ctx context.Context, object Obj
 	case keycloakApi.KeycloakRealmKind:
 		realm := &keycloakApi.KeycloakRealm{}
 		if err := h.client.Get(ctx, types.NamespacedName{Name: name, Namespace: object.GetNamespace()}, realm); err != nil {
+			if k8sErrors.IsNotFound(err) && object.GetDeletionTimestamp() != nil {
+				return nil, ErrKeycloakRealmNotFound
+			}
 			return nil, fmt.Errorf("unable to get realm: %w", err)
 		}
-
 		return h.getKeycloakAuthDataFromRealm(ctx, realm)
 	case keycloakAlpha.ClusterKeycloakRealmKind:
 		clusterRealm := &keycloakAlpha.ClusterKeycloakRealm{}
 		if err := h.client.Get(ctx, types.NamespacedName{Name: name}, clusterRealm); err != nil {
+			if k8sErrors.IsNotFound(err) && object.GetDeletionTimestamp() != nil {
+				return nil, ErrKeycloakRealmNotFound
+			}
 			return nil, fmt.Errorf("unable to get cluster realm: %w", err)
 		}
-
 		return h.getKeycloakAuthDataFromClusterRealm(ctx, clusterRealm)
 	default:
 		return nil, fmt.Errorf("unknown realm kind: %s", kind)

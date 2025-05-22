@@ -28,6 +28,7 @@ const finalizer = "keycloak.realmuser.operator.finalizer.name"
 
 type Helper interface {
 	SetFailureCount(fc helper.FailureCountable) time.Duration
+	TryRemoveFinalizer(ctx context.Context, obj client.Object, finalizer string) error
 	TryToDelete(ctx context.Context, obj client.Object, terminator helper.Terminator, finalizer string) (isDeleted bool, resultErr error)
 	SetRealmOwnerRef(ctx context.Context, object helper.ObjectWithRealmRef) error
 	GetKeycloakRealmFromRef(ctx context.Context, object helper.ObjectWithRealmRef, kcClient keycloak.Client) (*gocloak.RealmRepresentation, error)
@@ -117,6 +118,9 @@ func (r *Reconcile) tryReconcile(ctx context.Context, instance *keycloakApi.Keyc
 
 	kClient, err := r.helper.CreateKeycloakClientFromRealmRef(ctx, instance)
 	if err != nil {
+		if errors.Is(err, helper.ErrKeycloakRealmNotFound) {
+			return r.helper.TryRemoveFinalizer(ctx, instance, finalizer)
+		}
 		return fmt.Errorf("unable to create keycloak client from ref: %w", err)
 	}
 

@@ -24,6 +24,7 @@ import (
 
 type Helper interface {
 	SetFailureCount(fc helper.FailureCountable) time.Duration
+	TryRemoveFinalizer(ctx context.Context, obj client.Object, finalizer string) error
 	TryToDelete(ctx context.Context, obj client.Object, terminator helper.Terminator, finalizer string) (isDeleted bool, resultErr error)
 	SetRealmOwnerRef(ctx context.Context, object helper.ObjectWithRealmRef) error
 	CreateKeycloakClientFromRealmRef(ctx context.Context, object helper.ObjectWithRealmRef) (keycloak.Client, error)
@@ -125,6 +126,9 @@ func (r *ReconcileKeycloakClient) tryReconcile(ctx context.Context, keycloakClie
 
 	kClient, err := r.helper.CreateKeycloakClientFromRealmRef(ctx, keycloakClient)
 	if err != nil {
+		if errors.Is(err, helper.ErrKeycloakRealmNotFound) {
+			return r.helper.TryRemoveFinalizer(ctx, keycloakClient, keyCloakClientOperatorFinalizerName)
+		}
 		return fmt.Errorf("unable to create keycloak client from realm ref: %w", err)
 	}
 
