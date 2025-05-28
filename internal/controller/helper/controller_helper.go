@@ -65,6 +65,7 @@ type ControllerHelper interface {
 	SetRealmOwnerRef(ctx context.Context, object ObjectWithRealmRef) error
 	SetFailureCount(fc FailureCountable) time.Duration
 	TryToDelete(ctx context.Context, obj client.Object, terminator Terminator, finalizer string) (isDeleted bool, resultErr error)
+	TryRemoveFinalizer(ctx context.Context, obj client.Object, finalizer string) error
 	GetKeycloakRealmFromRef(ctx context.Context, object ObjectWithRealmRef, kcClient keycloak.Client) (*gocloak.RealmRepresentation, error)
 	CreateKeycloakClientFromRealmRef(ctx context.Context, object ObjectWithRealmRef) (keycloak.Client, error)
 	CreateKeycloakClientFromRealm(ctx context.Context, realm *keycloakApi.KeycloakRealm) (keycloak.Client, error)
